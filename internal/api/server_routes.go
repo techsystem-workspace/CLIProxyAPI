@@ -71,6 +71,9 @@ func (s *Server) setupRoutes() {
 		})
 		v1.POST("/chat/completions", openaiHandlers.ChatCompletions)
 		v1.POST("/completions", openaiHandlers.Completions)
+		// System One decision payloads ({model, state, questions}) enter the OpenAI pipeline
+		// so a ModelRouter plugin (plugins/systemone) can claim them.
+		v1.POST("/systemone", openaiHandlers.ChatCompletions)
 		v1.POST("/images/generations", openaiHandlers.ImagesGenerations)
 		v1.POST("/images/edits", openaiHandlers.ImagesEdits)
 		v1.POST("/videos", openaiHandlers.XAIVideosGenerations)

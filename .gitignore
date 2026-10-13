@@ -13,6 +13,11 @@ conv/*
 temp/*
 refs/*
 plugins/*
+# Plugin sources kept in the repo; built .so files above stay ignored.
+!plugins/systemone/
+!plugins/usage/
+!plugins/apikeys/
+plugins/*/cpa-plugin-*
 examples/plugin/bin/*
 
 # Storage backends
