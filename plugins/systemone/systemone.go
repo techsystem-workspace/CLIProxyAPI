@@ -26,10 +26,12 @@ type node struct {
 	Models   []model           `yaml:"models" json:"models,omitempty"`
 }
 
-// model is an upstream model id with an optional display name.
+// model is an upstream model id with an optional display name. Alias is an extra
+// client-facing name routed without the node prefix and echoed back in responses.
 type model struct {
-	ID   string `yaml:"id" json:"id"`
-	Name string `yaml:"name" json:"name,omitempty"`
+	ID    string `yaml:"id" json:"id"`
+	Name  string `yaml:"name" json:"name,omitempty"`
+	Alias string `yaml:"alias" json:"alias,omitempty"`
 }
 
 // UnmarshalYAML accepts either a plain id string or an {id, name} object.
@@ -127,6 +129,7 @@ func normalizeConfig(cfg pluginConfig) (pluginConfig, []string) {
 		for _, m := range n.Models {
 			if m.ID = strings.TrimSpace(m.ID); m.ID != "" {
 				m.Name = strings.TrimSpace(m.Name)
+				m.Alias = strings.TrimSpace(m.Alias)
 				models = append(models, m)
 			}
 		}
@@ -188,10 +191,21 @@ func apiKeys(n node) []string {
 	return keys
 }
 
-// resolveNode maps "prefix/model" to its node and the upstream model name.
+// resolveNode maps a model alias or "prefix/model" to its node and the upstream model name.
 // A node with an empty models list accepts any model under its prefix.
 func resolveNode(cfg pluginConfig, requested string) (node, string, bool) {
-	prefix, name, ok := strings.Cut(strings.TrimSpace(requested), "/")
+	requested = strings.TrimSpace(requested)
+	for _, n := range cfg.Nodes {
+		if n.Disabled {
+			continue
+		}
+		for _, m := range n.Models {
+			if m.Alias != "" && strings.EqualFold(m.Alias, requested) {
+				return n, m.ID, true
+			}
+		}
+	}
+	prefix, name, ok := strings.Cut(requested, "/")
 	if !ok || prefix == "" || name == "" {
 		return node{}, "", false
 	}

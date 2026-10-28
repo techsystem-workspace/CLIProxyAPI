@@ -169,7 +169,7 @@ async function saveNodes(nodes) {
 function presetOf(name) { return state.presets.find(p => p.preset === name) || null; }
 function toForm(n) {
   const keys = [].concat(n["api-key"] ? [n["api-key"]] : [], n["api-keys"] || []);
-  const models = (n.models || []).map(m => typeof m === "string" ? { id: m, name: "" } : { id: m.id || "", name: m.name || "" });
+  const models = (n.models || []).map(m => typeof m === "string" ? { id: m, name: "", alias: "" } : { id: m.id || "", name: m.name || "", alias: m.alias || "" });
   return {
     name: n.name || "", preset: n.preset || "", prefix: n.prefix || "", url: n.url || "",
     keys: keys.length ? keys : [""], headers: Object.entries(n.headers || {}).map(([k, v]) => ({ k, v })),
@@ -189,7 +189,12 @@ function fromForm(f) {
   if (Object.keys(headers).length) n.headers = headers;
   if (f.proxy.trim()) n["proxy-url"] = f.proxy.trim();
   if (f.disabled) n.disabled = true;
-  const models = f.models.filter(m => m.id.trim()).map(m => m.name.trim() ? { id: m.id.trim(), name: m.name.trim() } : { id: m.id.trim() });
+  const models = f.models.filter(m => m.id.trim()).map(m => {
+    const out = { id: m.id.trim() };
+    if (m.name.trim()) out.name = m.name.trim();
+    if ((m.alias || "").trim()) out.alias = m.alias.trim();
+    return out;
+  });
   if (models.length) n.models = models;
   return n;
 }
@@ -462,11 +467,12 @@ function renderModels(f) {
 
   const rows = f.models.length ? f.models : (presetModels || []).map(m => ({ id: m.id, name: m.name || "", preset: true }));
   if (rows.length) {
-    const table = h("table", {}, h("tr", {}, h("th", {}, "Model (client)"), h("th", {}, "Upstream id"), h("th", {}, "Display name"), h("th", {})));
+    const table = h("table", {}, h("tr", {}, h("th", {}, "Model (client)"), h("th", {}, "Upstream id"), h("th", {}, "Display name"), h("th", {}, "Alias"), h("th", {})));
     rows.forEach((m, i) => table.append(h("tr", {},
       h("td", {}, h("code", {}, prefix + "/" + m.id)),
       h("td", {}, m.preset ? m.id : bind(m, "id", {})),
       h("td", {}, m.preset ? (m.name || "") : bind(m, "name", { placeholder: "optional" })),
+      h("td", {}, m.preset ? "" : bind(m, "alias", { placeholder: "optional, e.g. jev-1.14.0" })),
       h("td", {}, h("div", { class: "row" },
         h("button", { onclick: () => { navigator.clipboard && navigator.clipboard.writeText(prefix + "/" + m.id); toast("Copied " + prefix + "/" + m.id); } }, "Copy"),
         m.preset ? null : h("button", { class: "danger", onclick: () => { f.models.splice(i, 1); render(); } }, "Remove"))))));
@@ -478,7 +484,7 @@ function renderModels(f) {
     h("button", { onclick: () => {
       if (!add.id.trim()) return toast("Model id is required");
       if (f.models.some(m => m.id === add.id.trim())) return toast("Model already added");
-      f.models.push({ id: add.id.trim(), name: add.name.trim() }); render();
+      f.models.push({ id: add.id.trim(), name: add.name.trim(), alias: "" }); render();
     } }, "Add model")));
 
   if (state.fetched) {
@@ -496,7 +502,7 @@ function renderModels(f) {
       }
       box.append(h("div", { class: "row", style: "margin-top:8px" },
         h("button", { class: "primary", onclick: () => {
-          for (const m of state.fetched.models) if (picks.has(m.id)) f.models.push({ id: m.id, name: m.name || "" });
+          for (const m of state.fetched.models) if (picks.has(m.id)) f.models.push({ id: m.id, name: m.name || "", alias: "" });
           state.fetched = null; render(); toast("Models added. Save to keep them.");
         } }, "Add selected"),
         h("button", { onclick: () => { state.fetched = null; render(); } }, "Close")));
