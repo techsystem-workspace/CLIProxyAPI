@@ -48,7 +48,9 @@ func (m *model) UnmarshalYAML(unmarshal func(any) error) error {
 // pluginConfig is plugins.configs.systemone. Its enabled key belongs to the plugin base settings:
 // the host stops calling a disabled plugin, so it is not read here.
 type pluginConfig struct {
-	Nodes []node `yaml:"nodes"`
+	Nodes     []node `yaml:"nodes"`
+	HFToken   string `yaml:"huggingface-token"`
+	ModelsDir string `yaml:"models-dir"`
 }
 
 // sessionPlaceholder in a header value is replaced with a fresh random id per request.
@@ -137,6 +139,10 @@ func normalizeConfig(cfg pluginConfig) (pluginConfig, []string) {
 		nodes = append(nodes, n)
 	}
 	cfg.Nodes = nodes
+	cfg.HFToken = strings.TrimSpace(cfg.HFToken)
+	if cfg.ModelsDir = strings.TrimSpace(cfg.ModelsDir); cfg.ModelsDir == "" {
+		cfg.ModelsDir = defaultModelsDir
+	}
 	return cfg, warnings
 }
 
